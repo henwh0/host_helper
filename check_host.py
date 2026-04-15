@@ -1,4 +1,5 @@
-import sys, re, subprocess
+import re, subprocess, sys
+from datetime import datetime, timedelta
 
 # ANSI color codes
 CYAN = "\033[0;36m"
@@ -9,14 +10,13 @@ NC = "\033[0m"
 
 # Dictionary with supported HW models. Add new models here
 VALID_MODELS = {
-        "YV2_TL": "YV2 TWINLAKE",
-        "TWINLAKES": "YV2 TWINLAKE",
-        "YV2_ND": "YV2 NORTH_DOME",
-        "NORTHDOME": "YV2 NORTH_DOME",
-        "YV3_DL": "YV3 DELTALAKE",
-        "DELTALAKE": "YV3 DELTALAKE",
+    "YV2_TL": "YV2 TWINLAKE",
+    "TWINLAKES": "YV2 TWINLAKE",
+    "YV2_ND": "YV2 NORTH_DOME",
+    "NORTHDOME": "YV2 NORTH_DOME",
+    "YV3_DL": "YV3 DELTALAKE",
+    "DELTALAKE": "YV3 DELTALAKE",
 }
-
 
 
 # Dictionary with errors that are searched. Add new patterns here
@@ -35,7 +35,22 @@ ERROR_PATTERNS = {
         "label": "PCIe Errors",
         "regex": r"PCIe",
         "severity": "warning",
-    }
+    },
+    "mcerr": {
+        "label": "MCERR",
+        "regex": r"MCERR|MACHINE_CHK",
+        "severity": "warning",
+    },
+    "caterr": {
+        "label": "CATERR",
+        "regex": r"CATERR",
+        "severity": "warning",
+    },
+    "ierr": {
+        "label": "IERR",
+        "regex": r"\bIERR\b",
+        "severity": "warning",
+    },
 }
 
 
@@ -46,9 +61,33 @@ SEVERITY_COLORS = {
 }
 
 
+# Filter cri_sel for last 30 days of logs
+# cri_sel timestamp ex: 2025 Dec  6 15:47:46 //  2026 Mar 17 15:22:15 SEE THAT THERE IS AN EXTRA BLANK SPACE IN BETWEEN MONTH AND DAY IF DAY ONLY HAS ONE NUMBER
+cri_sel_time_pattern = re.compile(r"^\s*(\d{4}\s+[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})")
+cri_sel_time_format = "%Y %b %d %H:%M:%S"
+
+
+def filter_cri_sel_by_date(log_text: str, days: int = 30) -> str:
+    """Filter cri_sel to only print logs that are N days old"""
+    cutoff = datetime.now() - timedelta(days=days)
+    filtered_lines = []
+
+    for line in log_text.splitlines():
+        m = cri_sel_time_pattern.match(line)
+        if m:
+            try:
+                log_time = datetime.strptime(m.group(1), cri_sel_time_format)
+                if log_time >= cutoff:
+                    filtered_lines.append(line)
+            except ValueError:
+                filtered_lines.append(line)
+
+    return "\n".join(filtered_lines)
+
+
 # Helper functions
 def run_cmd(cmd, shell=True):
-    """Run a shell command and return stripped stdout."""
+    """Run a shell command and return stdout."""
     result = subprocess.run(cmd, shell=shell, capture_output=True, text=True)
     return result.stdout.strip()
 
@@ -76,14 +115,16 @@ def run_hostory(sledname):
 def run_sled_dmesg(sledname):
     return subprocess.run(
         ["sush2", sledname, "dmesg"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     ).stdout
 
 
 def run_sled_cri_sel(sledname):
     return subprocess.run(
-        ["sush2", sledname, "cat /mnt/data/cri_sel | tail -n 30"],
-        capture_output=True, text=True,
+        ["sush2", sledname, "cat /mnt/data/cri_sel"],
+        capture_output=True,
+        text=True,
     ).stdout
 
 
@@ -93,7 +134,8 @@ def analyze_log(log_text):
     results = {}
     for key, pattern in ERROR_PATTERNS.items():
         matches = [
-            line for line in log_text.splitlines()
+            line
+            for line in log_text.splitlines()
             if re.search(pattern["regex"], line, re.IGNORECASE)
         ]
         results[key] = {
@@ -125,22 +167,33 @@ def check_sled(sledname):
     print(f"\n{CYAN}===Getting dmesg for {sledname}==={NC}")
     sled_dmesg = run_sled_dmesg(sledname)
 
-    print(f"\n{CYAN}===Analyzing Logs==={NC}")
-    results = analyze_log(sled_dmesg)
-    print_analysis(results)
+    print(f"\n{CYAN}===Getting cri_sel for {sledname}==={NC}")
+    raw_sled_cri_sel = run_sled_cri_sel(sledname)
 
-    print(f"\n{YELLOW}===Full dmesg output:==={NC}")
+    # Filter cri_sel to the last 30 days
+    sled_cri_sel = filter_cri_sel_by_date(raw_sled_cri_sel, days=30)
+    print(f"{GREEN} (Filtered to last 30 days){NC}")
+
+    print(f"\n{CYAN}===Analyzing Logs==={NC}\n")
+    dmesg_results = analyze_log(sled_dmesg)
+    cri_sel_results = analyze_log(sled_cri_sel)
+    print(f"\n\n{CYAN}===sled dmesg==={NC}\n")
+    print_analysis(dmesg_results)
+    print(f"\n\n{CYAN}===sled cri_sel==={NC}\n")
+    print_analysis(cri_sel_results)
+
+    print(f"\n{GREEN}===Full dmesg output:==={NC}")
     pastry_output = run_pastry(sled_dmesg)
     print(pastry_output)
-
-    print(f"\n{CYAN}===Retrieving sled cri_sel logs==={NC}")
-    sled_cri_sel = run_sled_cri_sel(sledname)
-    print(f"\n{sled_cri_sel}")
 
 
 def host_postcodes(hostname):
     """Prompt the user, then gather postcodes for a hostname."""
-    answer = input(f"{YELLOW}Do you want to gather host postcodes? [y/n]: {NC}").strip().lower()
+    answer = (
+        input(f"{YELLOW}Do you want to gather host postcodes? [y/n]: {NC}")
+        .strip()
+        .lower()
+    )
     if answer == "y":
         print(f"\n{GREEN}===Postcodes for {hostname}==={NC}")
         subprocess.run(["hwc", "postcodes", hostname], text=True)
@@ -149,13 +202,13 @@ def host_postcodes(hostname):
         print(f"\n{GREEN}Run Complete Without POST codes!{NC}")
 
 
-
-
 def usage():
     model_list = "\n".join(sorted(set(VALID_MODELS.values())))
     print(f"{CYAN}Usage: 'python3 checkhost.py' <sledname> OR <hostname>{NC}")
     print(f"{CYAN}Options: [-h][--help] shows this help page, then exits{NC}")
-    print(f"\n{YELLOW}Caveats: This script currently only runs on the following server types:{NC}")
+    print(
+        f"\n{YELLOW}Caveats: This script currently only runs on the following server types:{NC}"
+    )
     print(f"{YELLOW}{model_list}{NC}")
 
 
@@ -179,6 +232,7 @@ def validate_model(name):
     print(f"{RED}Type: {model_name} is not applicable.{NC}")
     print(f"Try: -h/--help to see applicable HW types.")
     sys.exit(1)
+
 
 def main():
     if len(sys.argv) < 2:
