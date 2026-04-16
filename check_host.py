@@ -1,4 +1,4 @@
-import re, subprocess, sys
+import re, subprocess, argparse
 from datetime import datetime, timedelta
 
 # ANSI color codes
@@ -39,17 +39,17 @@ ERROR_PATTERNS = {
     "mcerr": {
         "label": "MCERR",
         "regex": r"MCERR|MACHINE_CHK",
-        "severity": "warning",
+        "severity": "critical",
     },
     "caterr": {
         "label": "CATERR",
         "regex": r"CATERR",
-        "severity": "warning",
+        "severity": "critical",
     },
     "ierr": {
         "label": "IERR",
         "regex": r"\bIERR\b",
-        "severity": "warning",
+        "severity": "critical",
     },
 }
 
@@ -59,6 +59,7 @@ SEVERITY_COLORS = {
     "warning": YELLOW,
     "info": CYAN,
 }
+
 
 
 # Filter cri_sel for last 30 days of logs
@@ -159,7 +160,7 @@ def print_analysis(results):
 
 
 # Core functions
-def check_sled(sledname):
+def check_sled(sledname, days):
     """Run hostory, pull dmesg/cri_sel, analyze, and pastry the dmesg log."""
     print(f"{CYAN}===Hostory command for {sledname}==={NC}")
     run_hostory(sledname)
@@ -170,9 +171,9 @@ def check_sled(sledname):
     print(f"\n{CYAN}===Getting cri_sel for {sledname}==={NC}")
     raw_sled_cri_sel = run_sled_cri_sel(sledname)
 
-    # Filter cri_sel to the last 30 days
-    sled_cri_sel = filter_cri_sel_by_date(raw_sled_cri_sel, days=30)
-    print(f"{GREEN} (Filtered to last 30 days){NC}")
+    # Filter cri_sel to the last N days
+    sled_cri_sel = filter_cri_sel_by_date(raw_sled_cri_sel, days=days)
+    print(f"{GREEN} (Filtered to {days} days){NC}")
 
     print(f"\n{CYAN}===Analyzing Logs==={NC}\n")
     dmesg_results = analyze_log(sled_dmesg)
@@ -202,16 +203,6 @@ def host_postcodes(hostname):
         print(f"\n{GREEN}Run Complete Without POST codes!{NC}")
 
 
-def usage():
-    model_list = "\n".join(sorted(set(VALID_MODELS.values())))
-    print(f"{CYAN}Usage: 'python3 checkhost.py' <sledname> OR <hostname>{NC}")
-    print(f"{CYAN}Options: [-h][--help] shows this help page, then exits{NC}")
-    print(
-        f"\n{YELLOW}Caveats: This script currently only runs on the following server types:{NC}"
-    )
-    print(f"{YELLOW}{model_list}{NC}")
-
-
 def resolve_sled(hostname):
     """Use serf to turn a hostname into its parent sled name."""
     raw_asset = run_cmd(f'serf get name="{hostname}" --fields=parent_asset_tag')
@@ -231,20 +222,41 @@ def validate_model(name):
             return
     print(f"{RED}Type: {model_name} is not applicable.{NC}")
     print(f"Try: -h/--help to see applicable HW types.")
-    sys.exit(1)
+    raise SystemExit(1)
+
+##################################################################
+def build_parser():
+    model_list = "\n".join(sorted(set(VALID_MODELS.values())))
+    parser = argparse.ArgumentParser(
+        description="Check host/sled logs and analyze for errors.",
+        epilog=f"Caveats:\nThis script only supports:\n{model_list}",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "target",
+        help="hostname or sledname",
+        
+    )
+    parser.add_argument(
+        "--skip-postcodes",
+        action="store_true",
+        help="Do not prompt for postcodes",
+    )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=30,
+        help="Number of days to keep in cri_sel filter (default: %(default) s)",
+    )
+    return parser
 
 
 def main():
-    if len(sys.argv) < 2:
-        usage()
-        sys.exit(1)
-
-    arg = sys.argv[1]
-
-    if arg in ("-h", "--help"):
-        usage()
-        sys.exit(0)
-
+    parser = build_parser()
+    args = parser.parse_args()
+    
+    arg = args.target
+    
     # Validate model first
     validate_model(arg)
 
@@ -257,11 +269,12 @@ def main():
         sledname = resolve_sled(hostname)
 
     # Run sled checks
-    check_sled(sledname)
+    check_sled(sledname, days=args.days)
 
     # If a hostname was given, ask if you want postcodes, else exit
     if hostname:
-        host_postcodes(hostname)
+        if not args.skip_postcodes:
+            host_postcodes(hostname)
     else:
         print(f"\n{GREEN}Run complete!{NC}")
 
