@@ -1,4 +1,6 @@
-import re, subprocess, argparse
+import argparse
+import re
+import subprocess
 from datetime import datetime, timedelta
 
 # ANSI color codes
@@ -17,7 +19,6 @@ VALID_MODELS = {
     "YV3_DL": "YV3 DELTALAKE",
     "DELTALAKE": "YV3 DELTALAKE",
 }
-
 
 # Dictionary with errors that are searched. Add new patterns here
 ERROR_PATTERNS = {
@@ -53,7 +54,7 @@ ERROR_PATTERNS = {
     },
 }
 
-
+# Colors for severity levels. Add new colors here
 SEVERITY_COLORS = {
     "critical": RED,
     "warning": YELLOW,
@@ -61,29 +62,75 @@ SEVERITY_COLORS = {
 }
 
 
+##################################################################
+def build_parser():
+    model_list = "\n".join(sorted(set(VALID_MODELS.values())))
+    parser = argparse.ArgumentParser(
+        description="Check host/sled logs and analyze for errors.",
+        epilog=f"{YELLOW}Caveats:\nThis script only supports:\n{model_list}{NC}",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "target",
+        help="hostname or sledname",
+    )
+    parser.add_argument(
+        "--skip-postcodes",
+        action="store_true",
+        help="Do not prompt for postcodes",
+    )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=30,
+        help="Number of days to keep in cri_sel filter (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--no-hostory",
+        action="store_true",
+        help="Skips hostory command",
+    )
+    parser.add_argument(
+        "--errors",
+        nargs="+",
+        help=f"Errors to search for: {list(ERROR_PATTERNS.keys())}",
+    )
+    return parser
 
-# Filter cri_sel for last 30 days of logs
-# cri_sel timestamp ex: 2025 Dec  6 15:47:46 //  2026 Mar 17 15:22:15 SEE THAT THERE IS AN EXTRA BLANK SPACE IN BETWEEN MONTH AND DAY IF DAY ONLY HAS ONE NUMBER
-cri_sel_time_pattern = re.compile(r"^\s*(\d{4}\s+[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})")
-cri_sel_time_format = "%Y %b %d %H:%M:%S"
+
+##################################################################
 
 
-def filter_cri_sel_by_date(log_text: str, days: int = 30) -> str:
-    """Filter cri_sel to only print logs that are N days old"""
-    cutoff = datetime.now() - timedelta(days=days)
-    filtered_lines = []
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
 
-    for line in log_text.splitlines():
-        m = cri_sel_time_pattern.match(line)
-        if m:
-            try:
-                log_time = datetime.strptime(m.group(1), cri_sel_time_format)
-                if log_time >= cutoff:
-                    filtered_lines.append(line)
-            except ValueError:
-                filtered_lines.append(line)
+    arg = args.target
+    if not arg:
+        print(f"{RED}No hostname or sledname provided.{NC}")
+        parser.print_help()
+        raise SystemExit(1)
 
-    return "\n".join(filtered_lines)
+    # Validate model first
+    validate_model(arg)
+
+    # Resolve sled name
+    if arg.startswith("sled"):
+        sledname = arg
+        hostname = None
+    else:
+        hostname = arg
+        sledname = resolve_sled(hostname)
+
+    # Run sled checks
+    check_sled(sledname, args=args)
+
+    # Optional host postcodes
+    if hostname:
+        if not args.skip_postcodes:
+            host_postcodes(hostname)
+    else:
+        print(f"\n{GREEN}Run complete!{NC}")
 
 
 # Helper functions
@@ -129,6 +176,32 @@ def run_sled_cri_sel(sledname):
     ).stdout
 
 
+# Filter cri_sel for last 30 days of logs
+# cri_sel timestamp ex: 2025 Dec  6 15:47:46 //  2026 Mar 17 15:22:15 SEE THAT THERE IS AN EXTRA BLANK SPACE IN BETWEEN MONTH AND DAY IF DAY ONLY HAS ONE NUMBER
+cri_sel_time_pattern = re.compile(
+    r"^\s*(\d{4}\s+[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})"
+)
+cri_sel_time_format = "%Y %b %d %H:%M:%S"
+
+
+def filter_cri_sel_by_date(log_text: str, days: int = 30) -> str:
+    """Filter cri_sel to only print logs that are N days old"""
+    cutoff = datetime.now() - timedelta(days=days)
+    filtered_lines = []
+
+    for line in log_text.splitlines():
+        m = cri_sel_time_pattern.match(line)
+        if m:
+            try:
+                log_time = datetime.strptime(m.group(1), cri_sel_time_format)
+                if log_time >= cutoff:
+                    filtered_lines.append(line)
+            except ValueError:
+                filtered_lines.append(line)
+
+    return "\n".join(filtered_lines)
+
+
 # Log analysis
 def analyze_log(log_text):
     """Scan log_text against every ERROR_PATTERN. Returns dict of results."""
@@ -160,10 +233,11 @@ def print_analysis(results):
 
 
 # Core functions
-def check_sled(sledname, days):
+def check_sled(sledname, args):
     """Run hostory, pull dmesg/cri_sel, analyze, and pastry the dmesg log."""
-    print(f"{CYAN}===Hostory command for {sledname}==={NC}")
-    run_hostory(sledname)
+    if not args.no_hostory:
+        print(f"{CYAN}===Hostory command for {sledname}==={NC}")
+        run_hostory(sledname)
 
     print(f"\n{CYAN}===Getting dmesg for {sledname}==={NC}")
     sled_dmesg = run_sled_dmesg(sledname)
@@ -172,8 +246,8 @@ def check_sled(sledname, days):
     raw_sled_cri_sel = run_sled_cri_sel(sledname)
 
     # Filter cri_sel to the last N days
-    sled_cri_sel = filter_cri_sel_by_date(raw_sled_cri_sel, days=days)
-    print(f"{GREEN} (Filtered to {days} days){NC}")
+    sled_cri_sel = filter_cri_sel_by_date(raw_sled_cri_sel, days=args.days)
+    print(f"{GREEN}(Filtered to {args.days} days){NC}")
 
     print(f"\n{CYAN}===Analyzing Logs==={NC}\n")
     dmesg_results = analyze_log(sled_dmesg)
@@ -223,60 +297,6 @@ def validate_model(name):
     print(f"{RED}Type: {model_name} is not applicable.{NC}")
     print(f"Try: -h/--help to see applicable HW types.")
     raise SystemExit(1)
-
-##################################################################
-def build_parser():
-    model_list = "\n".join(sorted(set(VALID_MODELS.values())))
-    parser = argparse.ArgumentParser(
-        description="Check host/sled logs and analyze for errors.",
-        epilog=f"Caveats:\nThis script only supports:\n{model_list}",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    parser.add_argument(
-        "target",
-        help="hostname or sledname",
-        
-    )
-    parser.add_argument(
-        "--skip-postcodes",
-        action="store_true",
-        help="Do not prompt for postcodes",
-    )
-    parser.add_argument(
-        "--days",
-        type=int,
-        default=30,
-        help="Number of days to keep in cri_sel filter (default: %(default) s)",
-    )
-    return parser
-
-
-def main():
-    parser = build_parser()
-    args = parser.parse_args()
-    
-    arg = args.target
-    
-    # Validate model first
-    validate_model(arg)
-
-    # Resolve sled name
-    if arg.startswith("sled"):
-        sledname = arg
-        hostname = None
-    else:
-        hostname = arg
-        sledname = resolve_sled(hostname)
-
-    # Run sled checks
-    check_sled(sledname, days=args.days)
-
-    # If a hostname was given, ask if you want postcodes, else exit
-    if hostname:
-        if not args.skip_postcodes:
-            host_postcodes(hostname)
-    else:
-        print(f"\n{GREEN}Run complete!{NC}")
 
 
 if __name__ == "__main__":
