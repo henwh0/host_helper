@@ -66,8 +66,15 @@ SEVERITY_COLORS = {
 def build_parser():
     model_list = "\n".join(sorted(set(VALID_MODELS.values())))
     parser = argparse.ArgumentParser(
-        description="Check host/sled logs and analyze for errors.",
-        epilog=f"{YELLOW}Caveats:\nThis script only supports:\n{model_list}{NC}",
+        prog="check_host",
+        description="Check logs and analyze for errors.",
+        epilog=(
+            f"{YELLOW}Caveats:\nThis script only supports:\n{model_list}{NC}\n"
+            "examples:\n"
+            "    check_host.py aled1234frc2\n"
+            "    check_host.py sled1234frc2 --errors mcerr dimm\n"
+            "    check_host.py host12345frc2 --days 7 --skip-postcodes\n"
+        ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
@@ -111,8 +118,21 @@ def main():
         parser.print_help()
         raise SystemExit(1)
 
+    if args.errors:
+        for error in args.errors:
+            if error not in ERROR_PATTERNS:
+                print(f"{RED}Error: {error} is not a valid error to search for.{NC}")
+                print(f"Valid options: {list(ERROR_PATTERNS.keys())}")
+                raise SystemExit(1)
+
     # Validate model first
     validate_model(arg)
+
+    # Show which errors are filtered if any
+    if args.errors:
+        print(f"{YELLOW}Filtering for errors: {', '.join(e.upper() for e in args.errors)}{NC}\n")
+    else:
+        print(f"{YELLOW}Searching for all errors{NC}\n")
 
     # Resolve sled name
     if arg.startswith("sled"):
@@ -203,10 +223,17 @@ def filter_cri_sel_by_date(log_text: str, days: int = 30) -> str:
 
 
 # Log analysis
-def analyze_log(log_text):
+def analyze_log(log_text, selected_errors=None):
     """Scan log_text against every ERROR_PATTERN. Returns dict of results."""
     results = {}
-    for key, pattern in ERROR_PATTERNS.items():
+
+    patterns_to_use = (
+        {k: v for k, v in ERROR_PATTERNS.items() if k in selected_errors}
+        if selected_errors
+        else ERROR_PATTERNS
+    )
+
+    for key, pattern in patterns_to_use.items():
         matches = [
             line
             for line in log_text.splitlines()
@@ -250,8 +277,10 @@ def check_sled(sledname, args):
     print(f"{GREEN}(Filtered to {args.days} days){NC}")
 
     print(f"\n{CYAN}===Analyzing Logs==={NC}\n")
-    dmesg_results = analyze_log(sled_dmesg)
-    cri_sel_results = analyze_log(sled_cri_sel)
+    selected_errors = args.errors
+    dmesg_results = analyze_log(sled_dmesg, selected_errors=selected_errors)
+    cri_sel_results = analyze_log(sled_cri_sel, selected_errors=selected_errors)
+
     print(f"\n\n{CYAN}===sled dmesg==={NC}\n")
     print_analysis(dmesg_results)
     print(f"\n\n{CYAN}===sled cri_sel==={NC}\n")
