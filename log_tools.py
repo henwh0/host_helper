@@ -59,6 +59,7 @@ def filter_cri_sel_by_age(log_text: str, days: int = 30) -> str:
     cutoff = datetime.now() - timedelta(days=days)
     filtered_lines: list[str] = []
 
+
     for line in log_text.splitlines():
         m = cri_sel_time_pattern.match(line)
         if not m:
@@ -87,7 +88,7 @@ def scan_sled_logs_for_errors(
     cri_sel,
     log_util,
     selected_errors = None,
-) -> tuple[dict, dict, Optional[dict]]:
+):
     """Analyze all logs. Returns None for log_util if input is empty."""
     dmesg_results = scan_log_for_errors(dmesg, selected_errors=selected_errors)
     cri_sel_results = scan_log_for_errors(cri_sel, selected_errors=selected_errors)
