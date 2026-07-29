@@ -1,5 +1,5 @@
 ```text
-INPUT
+Input valid hostname/sledname
   ↓
 resolve host info/sled info
   ↓
