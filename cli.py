@@ -1,5 +1,3 @@
-
-
 # imports from local
 from host_helper.config import (
     Colors,
@@ -12,11 +10,7 @@ from host_helper.core import run_sled_analysis, validate_asset_model
 from host_helper.system_calls import show_host_postcodes, resolve_target_information
 
 
-def display_log_results(
-    dmesg_results,
-    cri_sel_results,
-    log_util_results = None,
-) 
+def display_log_results(dmesg_results, cri_sel_results, log_util_results = None):
     """Print formatted results for each log source."""
     cprint("\n\n=== sled_dmesg ===\n", Colors.CYAN)
     display_error_results(dmesg_results)
@@ -32,7 +26,7 @@ def display_log_results(
 #########
 
 
-def display_error_results(results) 
+def display_error_results(results):
     """Print analysis results with severity coloring."""
     any_matches = False
 
@@ -66,7 +60,7 @@ def main() -> None:
     """CLI entry point."""
     parser = create_cli_parser()
     args = parser.parse_args()
-    
+
     if args.errors:
         args.errors = [error.lower() for error in args.errors]
     target: str = args.target
