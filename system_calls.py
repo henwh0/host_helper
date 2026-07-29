@@ -21,7 +21,7 @@ CRI_SEL_DELIMITER: str = "=== CRI_SEL_START ==="
 LOG_UTIL_DELIMITER: str = "=== LOG_UTIL_START ==="
 
 
-def retrieve_sled_logs(sledname: str, host_position: Optional[int] = None) -> tuple[str, str, str]:
+def retrieve_sled_logs(sledname: str, host_position = None):
     """Get dmesg, cri_sel, and log-util in a single sush2 session."""
     combined_cmd = (
         f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"
@@ -74,11 +74,11 @@ def show_host_postcodes(hostname: str) -> None:
 
 ##########
 
-def resolve_target_information(target, args) -> tuple[str, Optional[str], Optional[str], Optional[int]]:
+def resolve_target_information(target, args):
     """Resolves target information.
     if hostname: resolves host model;sledname;rack_sub_position_slot
     if sledname: resolves sled model"""
-    
+
     if target.startswith("sled"):
         info = parse_serf_output(run_cmd(["serf", "get", f"name={target}", "--fields=model"]))
         return target, info.get("model"), None, None
