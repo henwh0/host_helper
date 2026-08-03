@@ -21,7 +21,7 @@ CRI_SEL_DELIMITER: str = "=== CRI_SEL_START ==="
 LOG_UTIL_DELIMITER: str = "=== LOG_UTIL_START ==="
 
 
-def retrieve_sled_logs(sledname: str, host_position = None):
+def retrieve_sled_logs(sledname: str, host_position=None):
     """Get dmesg, cri_sel, and log-util in a single sush2 session."""
     combined_cmd = (
         f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"

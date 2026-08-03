@@ -8,7 +8,7 @@ from host_helper.log_tools import (
 from host_helper.system_calls import run_hostory, retrieve_sled_logs
 
 
-def run_sled_analysis(sledname, args, host_position = None):
+def run_sled_analysis(sledname, args, host_position=None):
     """Run hostory, retrieve sled logs, apply filters and analyze for errors"""
 
     cprint(f"=== Hostory cmd for {sledname} ===", Colors.CYAN)
