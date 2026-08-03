@@ -59,7 +59,6 @@ def filter_cri_sel_by_age(log_text: str, days: int = 30) -> str:
     cutoff = datetime.now() - timedelta(days=days)
     filtered_lines: list[str] = []
 
-
     for line in log_text.splitlines():
         m = cri_sel_time_pattern.match(line)
         if not m:
