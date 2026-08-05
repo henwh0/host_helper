@@ -12,7 +12,7 @@ from host_helper.system_calls import resolve_target_information
 
 
 def display_log_results(dmesg_results, cri_sel_results, log_util_results=None):
-    
+
     """Print formatted results for each log source."""
     cprint("\n\n=== sled_dmesg ===\n", Colors.CYAN)
     display_error_results(dmesg_results)
@@ -55,6 +55,7 @@ def display_error_results(results):
         cprint("No matches found..", Colors.GREEN)
 
 
+
 #########
 
 
@@ -69,11 +70,11 @@ def main() -> None:
 
     # Resolve target information
     sledname, sled_model_name, hostname, host_position = resolve_target_information(target, args)
-    
+
     # Checks detected model against VALID_MODELS dict to ensure model is supported.
     model_name = validate_asset_model(sled_model_name)
     cprint(f"Detected model: {model_name}\n", Colors.GREEN)
-    
+
     # Gathering sled data
     sled_analysis_start = perf_counter()
     dmesg_results, cri_sel_results, log_util_results, postcode_output = run_sled_analysis(sledname, args, host_position, hostname,)
@@ -81,7 +82,7 @@ def main() -> None:
 
     # Print log results
     display_log_results(dmesg_results, cri_sel_results, log_util_results)
-    
+
     if postcode_output:
         cprint(f"\n\n=== Postcodes for {hostname} ===", Colors.GREEN)
         print(postcode_output)
