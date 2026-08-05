@@ -1,7 +1,6 @@
 # standard imports
 import re
 from datetime import datetime, timedelta
-
 # imports from local
 from host_helper.config import cri_sel_time_format, cri_sel_time_pattern, ERROR_PATTERNS
 
@@ -86,10 +85,11 @@ def scan_sled_logs_for_errors(
     dmesg,
     cri_sel,
     log_util,
+    postcode_output = None,
     selected_errors = None,
 ):
     """Analyze all logs. Returns None for log_util if input is empty."""
     dmesg_results = scan_log_for_errors(dmesg, selected_errors=selected_errors)
     cri_sel_results = scan_log_for_errors(cri_sel, selected_errors=selected_errors)
     log_util_results = scan_log_for_errors(log_util, selected_errors=selected_errors) if log_util else None
-    return dmesg_results, cri_sel_results, log_util_results
+    return dmesg_results, cri_sel_results, log_util_results, postcode_output
