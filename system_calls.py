@@ -68,10 +68,11 @@ def run_hostory(sledname: str) -> None:
 
 #########
 
-def show_host_postcodes(hostname: str) -> None:
-    """Print host postcodes for the given hostname."""
-    print(run_cmd(["hwc", "postcodes", hostname]))
+def retrieve_host_postcodes(hostname: str) -> str:
+    """Retrieves host postcodes for the given hostname."""
+    return run_cmd(["hwc", "postcodes", hostname])
 
+##
 ##########
 
 def resolve_target_information(target, args):
