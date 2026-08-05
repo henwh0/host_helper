@@ -101,7 +101,7 @@ def resolve_target_information(target, args):
 
     sled_model_name = host_info.get("model")
 
-    host_position: Optional[int] = None
+    host_position = None
     if need_position:
         raw_pos = host_info.get("rack_sub_position_slot")
         if raw_pos:

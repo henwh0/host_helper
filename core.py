@@ -6,22 +6,29 @@ from host_helper.log_tools import (
     filter_cri_sel_by_age,
     filter_cri_sel_by_host_position,
 )
-from host_helper.system_calls import run_hostory, retrieve_sled_logs
+from host_helper.system_calls import run_hostory, retrieve_sled_logs, retrieve_host_postcodes
 
 
-def run_sled_analysis(sledname, args, host_position=None):
+def run_sled_analysis(sledname, args, host_position=None, hostname=None):
     """Run hostory, retrieve sled logs, apply filters and analyze for errors"""
      
     cprint(f"=== Hostory cmd for {sledname} ===", Colors.CYAN)
     #####
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         hostory_future = executor.submit(run_hostory, sledname)
         logs_future = executor.submit(retrieve_sled_logs, sledname, host_position)
-        ##
-        hostory_future.result()
-        ##
-        sled_dmesg, sled_cri_sel, sled_log_util = logs_future.result()
+        postcode_future = executor.submit(retrieve_host_postcodes, hostname) if hostname else None
+        try:
+            ##
+            sled_dmesg, sled_cri_sel, sled_log_util = logs_future.result()
+            ##
+            hostory_future.result()
         
+            postcode_output = postcode_future.result() if postcode_future else None
+        except Exception as e:
+            cprint(f"Log collection failed: {e}", Colors.RED)
+            raise SystemExit(EXIT_SLED_LOG_FAIL)
+    
     cprint(f"\n=== Processing logs for {sledname} ===", Colors.CYAN)    
     
     if sled_dmesg is None or sled_cri_sel is None:

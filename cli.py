@@ -1,5 +1,4 @@
 from time import perf_counter
-from concurrent.futures import ThreadPoolExecutor
 # imports from local
 from host_helper.config import (
     Colors,
@@ -9,7 +8,7 @@ from host_helper.config import (
     create_cli_parser,
 )
 from host_helper.core import run_sled_analysis, validate_asset_model
-from host_helper.system_calls import retrieve_host_postcodes, resolve_target_information
+from host_helper.system_calls import resolve_target_information
 
 
 def display_log_results(dmesg_results, cri_sel_results, log_util_results=None):
@@ -75,16 +74,11 @@ def main() -> None:
     model_name = validate_asset_model(sled_model_name)
     cprint(f"Detected model: {model_name}\n", Colors.GREEN)
     
-    # Gathering logs & postcodes IF hostname
+    # Gathering sled data
     sled_analysis_start = perf_counter()
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        log_future = executor.submit(run_sled_analysis, sledname, args, host_position)
-        postcode_future = executor.submit(retrieve_host_postcodes, hostname) if hostname else None
-        ##
-        dmesg_results, cri_sel_results, log_util_results = log_future.result()
-        postcode_output = postcode_future.result() if postcode_future else None
+    dmesg_results, cri_sel_results, log_util_results, postcode_output = run_sled_analysis(sledname, args, host_position, hostname,)
     sled_analysis_end = perf_counter()
-    
+
     # Print log results
     display_log_results(dmesg_results, cri_sel_results, log_util_results)
     
