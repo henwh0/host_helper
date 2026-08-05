@@ -11,7 +11,7 @@ from host_helper.system_calls import run_hostory, retrieve_sled_logs, retrieve_h
 
 def run_sled_analysis(sledname, args, host_position=None, hostname=None):
     """Run hostory, retrieve sled logs, apply filters and analyze for errors"""
-     
+
     cprint(f"=== Hostory cmd for {sledname} ===", Colors.CYAN)
     #####
     with ThreadPoolExecutor(max_workers=3) as executor:
@@ -23,14 +23,14 @@ def run_sled_analysis(sledname, args, host_position=None, hostname=None):
             sled_dmesg, sled_cri_sel, sled_log_util = logs_future.result()
             ##
             hostory_future.result()
-        
+
             postcode_output = postcode_future.result() if postcode_future else None
         except Exception as e:
             cprint(f"Log collection failed: {e}", Colors.RED)
             raise SystemExit(EXIT_SLED_LOG_FAIL)
-    
-    cprint(f"\n=== Processing logs for {sledname} ===", Colors.CYAN)    
-    
+
+    cprint(f"\n=== Processing logs for {sledname} ===", Colors.CYAN)
+
     if sled_dmesg is None or sled_cri_sel is None:
         cprint("Failed to retrieve sled logs.", Colors.RED)
         raise SystemExit(EXIT_SLED_LOG_FAIL)
@@ -53,7 +53,7 @@ def run_sled_analysis(sledname, args, host_position=None, hostname=None):
 
 
     # Apply filters before regex scan
-    return scan_sled_logs_for_errors(sled_dmesg, sled_cri_sel, sled_log_util, args.errors)
+    return scan_sled_logs_for_errors(sled_dmesg, sled_cri_sel, sled_log_util, postcode_output, args.errors)
 
 
 #########
