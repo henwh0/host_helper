@@ -31,7 +31,7 @@ def retrieve_sled_logs(sledname: str, host_position=None):
         combined_cmd = (
             f"{combined_cmd}; "
             f"echo '{LOG_UTIL_DELIMITER}'; "
-            f"log-util slot{host_position} --print"
+            f"/usr/local/bin/log-util slot{host_position} --print"
         )
 
     result = subprocess.run(
@@ -39,8 +39,8 @@ def retrieve_sled_logs(sledname: str, host_position=None):
         capture_output=True,
         text=True,
     )
-    if result.returncode != 0:
-        cprint(f"Failed to get logs from {sledname}: {result.stderr}", Colors.RED)
+    if not result.stdout.strip():
+        cprint(f"No output from {sledname}: {result.stderr}", Colors.RED)
         raise SystemExit(EXIT_SLED_LOG_FAIL)
 
     parts = result.stdout.split(CRI_SEL_DELIMITER, 1)
