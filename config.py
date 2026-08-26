@@ -112,7 +112,7 @@ def create_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--all-hosts",
         action="store_true",
-        help=f"Show cri_sel for all hosts on the sled {Colors.YELLOW}(skips host-position filter){Colors.NC}",
+        help=f"Skips host-position filter. {Colors.YELLOW}cri_sel and log-util results will be system-wide.{Colors.NC},
     )
     return parser
 

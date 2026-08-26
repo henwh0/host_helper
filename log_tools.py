@@ -81,15 +81,12 @@ def filter_cri_sel_by_host_position(log_text: str, host_position: int) -> str:
 
 ###########
 
-def scan_sled_logs_for_errors(
-    dmesg,
-    cri_sel,
-    log_util,
-    postcode_output = None,
-    selected_errors = None,
-):
+def scan_sled_logs_for_errors(dmesg, cri_sel, log_util_by_slot, postcode_output = None, selected_errors = None,):
     """Analyze all logs. Returns None for log_util if input is empty."""
     dmesg_results = scan_log_for_errors(dmesg, selected_errors=selected_errors)
     cri_sel_results = scan_log_for_errors(cri_sel, selected_errors=selected_errors)
-    log_util_results = scan_log_for_errors(log_util, selected_errors=selected_errors) if log_util else None
+    log_util_results = {
+        slot: scan_log_for_errors(text, selected_errors=selected_errors)
+        for slot, text in (log_util_by_slot or {}).items()
+    }
     return dmesg_results, cri_sel_results, log_util_results, postcode_output

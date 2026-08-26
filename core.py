@@ -9,14 +9,14 @@ from host_helper.log_tools import (
 from host_helper.system_calls import run_hostory, retrieve_sled_logs, retrieve_host_postcodes
 
 
-def run_sled_analysis(sledname, args, host_position=None, hostname=None):
+def run_sled_analysis(sledname, args, host_position=None, hostname=None, slots=None):
     """Run hostory, retrieve sled logs, apply filters and analyze for errors"""
 
     cprint(f"=== Hostory cmd for {sledname} ===", Colors.CYAN)
     #####
     with ThreadPoolExecutor(max_workers=3) as executor:
         hostory_future = executor.submit(run_hostory, sledname)
-        logs_future = executor.submit(retrieve_sled_logs, sledname, host_position)
+        logs_future = executor.submit(retrieve_sled_logs, sledname, host_position, slots)
         postcode_future = executor.submit(retrieve_host_postcodes, hostname) if hostname else None
         try:
             ##

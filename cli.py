@@ -21,10 +21,9 @@ def display_log_results(dmesg_results, cri_sel_results, log_util_results=None):
     display_error_results(cri_sel_results)
 
     if log_util_results:
-        cprint("\n\n=== log-util ===\n", Colors.CYAN)
-        display_error_results(log_util_results)
-
-
+        for slot in sorted(log_util_results):
+            cprint(f"\n\n=== log-util slot{slot} ===\n", Colors.CYAN)
+            display_error_results(log_util_results[slot])
 #########
 
 
@@ -55,8 +54,9 @@ def display_error_results(results):
         cprint("No matches found..", Colors.GREEN)
 
 
-
-#########
+#############################
+######### MAIN ##############
+#############################
 
 
 def main() -> None:
@@ -69,7 +69,7 @@ def main() -> None:
     target: str = args.target
 
     # Resolve target information
-    sledname, sled_model_name, hostname, host_position = resolve_target_information(target, args)
+    sledname, sled_model_name, hostname, host_position, slots = resolve_target_information(target, args)
 
     # Checks detected model against VALID_MODELS dict to ensure model is supported.
     model_name = validate_asset_model(sled_model_name)
@@ -77,7 +77,7 @@ def main() -> None:
 
     # Gathering sled data
     sled_analysis_start = perf_counter()
-    dmesg_results, cri_sel_results, log_util_results, postcode_output = run_sled_analysis(sledname, args, host_position, hostname,)
+    dmesg_results, cri_sel_results, log_util_results, postcode_output = run_sled_analysis(sledname, args, host_position, hostname, slots)
     sled_analysis_end = perf_counter()
 
     # Print log results
