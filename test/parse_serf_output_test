@@ -1,0 +1,44 @@
+"""Prints the parsed SERF output"""
+
+
+import json
+import subprocess
+import sys
+
+
+
+def parse_serf_output(text: str) -> list[dict[str, str]]:
+    """Parse key=value output from serf into a dictionary."""
+    result: list[dict[str, str]] = []
+    current: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.strip():
+            if current:
+                result.append(current)
+                current = {}
+            continue
+        if "=" in line:
+            key, value = line.split("=", 1)
+            current[key.strip()] = value.strip()
+    if current:
+        result.append(current)
+    return result
+
+
+
+sample_serf_results = """\
+        name=host123.1.frc2
+        parent_asset_tag=12345
+        model=YV3_DL_T1
+        rack_sub_position_slot=1
+
+        name=host123.2.frc2
+        parent_asset_tag=12345
+        model=YV3_DL_T1
+        rack_sub_position_slot=2
+
+        """
+
+
+
+print(parse_serf_output(sample_serf_results))
