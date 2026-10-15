@@ -16,8 +16,6 @@ def scan_log_for_errors(log_text, selected_errors = None) -> dict[str, dict]:
             if key in ERROR_PATTERNS
         }
 
-    
-
     results: dict[str, dict] = {}
 
     for key in errors_to_search:
