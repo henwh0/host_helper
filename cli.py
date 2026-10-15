@@ -34,26 +34,33 @@ def display_error_results(results):
 
     for data in results.values():
         color = SEVERITY_COLORS.get(data["severity"], Colors.NC)
-        if not data["matches"]:
+        matches = data["matches"]
+        
+        if not matches:
             continue
 
         any_matches = True
-        total_matches = len(data["matches"])
+        total_matches = len(matches)
+        
         print(f"\n{color}=== Found {data['label']} ==={Colors.NC}")
 
-        matches = data["matches"]
-        if total_matches > MAX_TERMINAL_LINES:
+        if total_matches > 10:
             print(
-                f"{color}...({total_matches - MAX_TERMINAL_LINES} earlier lines omitted)...{Colors.NC}"
+                f"{color}{matches[0]} ({total_matches} matches total){Colors.NC}"
             )
+        
+            if total_matches > MAX_TERMINAL_LINES:
+                print(
+                    f"{color}({total_matches - MAX_TERMINAL_LINES} earlier lines omitted)...{Colors.NC}"
+                )
             matches = matches[-MAX_TERMINAL_LINES:]
-
+        
         for line in matches:
             print(f"{color}{line}{Colors.NC}")
 
     if not any_matches:
-        cprint("No matches found..", Colors.GREEN)
-
+        cprint("No matches found...", Colors.GREEN)
+    
 
 #############################
 ######### MAIN ##############
@@ -97,4 +104,3 @@ def main() -> None:
     cprint("\nRun complete!", Colors.GREEN)
     print("Performance stats:")
     print(f"Time to analyze logs & retrieve postcodes: {sled_analysis_end - sled_analysis_start:.2f} seconds")
-    
