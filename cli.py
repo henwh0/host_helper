@@ -46,8 +46,11 @@ def display_error_results(results):
 
         if total_matches > 10:
             print(
-                f"{color}{matches[0]} ({total_matches} matches total){Colors.NC}"
+                f"{color}{matches[0]} ({total_matches - 1} omitted because they're the same error){Colors.NC}"
             )
+        else:
+            for line in matches:
+                print(f"{color}{line}{Colors.NC}")
         
             if total_matches > MAX_TERMINAL_LINES:
                 print(
@@ -55,8 +58,8 @@ def display_error_results(results):
                 )
             matches = matches[-MAX_TERMINAL_LINES:]
         
-        for line in matches:
-            print(f"{color}{line}{Colors.NC}")
+        #for line in matches:
+        #    print(f"{color}{line}{Colors.NC}")
 
     if not any_matches:
         cprint("No matches found...", Colors.GREEN)
@@ -83,7 +86,7 @@ def main() -> None:
     target: str = args.target
 
     # Resolve target information
-    sledname, sled_model_name, hostname, host_position, slots = resolve_target_information(target, args)
+    sledname, sled_model_name, hostname, host_position, slots, asset_id = resolve_target_information(target, args)
 
     # Checks detected model against VALID_MODELS dict to ensure model is supported.
     model_name = validate_asset_model(sled_model_name)
@@ -104,3 +107,4 @@ def main() -> None:
     cprint("\nRun complete!", Colors.GREEN)
     print("Performance stats:")
     print(f"Time to analyze logs & retrieve postcodes: {sled_analysis_end - sled_analysis_start:.2f} seconds")
+    

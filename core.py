@@ -41,7 +41,7 @@ def run_sled_analysis(sledname, args, host_position=None, hostname=None, slots=N
             postcode_output = None
             
     cprint(f"\n=== Processing logs for {sledname} ===", Colors.CYAN)
-
+  
     if sled_dmesg is None or sled_cri_sel is None:
         cprint("Failed to retrieve sled logs.", Colors.RED)
         raise SystemExit(EXIT_SLED_LOG_FAIL)

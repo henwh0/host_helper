@@ -50,12 +50,17 @@ ERROR_PATTERNS = {
     "caterr": {
         "label": "CATERR",
         "regex": re.compile(r"CATERR", re.IGNORECASE),
-        "severity": "warning",
+        "severity": "critical",
     },
     "ierr": {
         "label": "IERR",
         "regex": re.compile(r"\bIERR\b", re.IGNORECASE),
         "severity": "warning",
+    },
+    "12v": {
+        "label": "12v Power Error",
+        "regex": re.compile(r"PWROK|PWR_OK", re.IGNORECASE),
+        "severity": "critical",
     },
 }
 

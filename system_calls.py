@@ -28,7 +28,11 @@ def retrieve_sled_logs(sledname: str, host_position=None, slots=None):
     """Get dmesg, cri_sel, and per-slot log-util in a single sush2 session."""
     target_slots = slots if slots else ([host_position] if host_position is not None else [])
     
-    combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"
+    if host_position is not None:
+        combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel | grep -i fru:{host_position}"
+    else:
+        combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"
+        
     for slot in target_slots:
         combined_cmd += (
             f"; echo '{LOG_UTIL_DELIMITER}:{slot}'; "
