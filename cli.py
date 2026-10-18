@@ -49,18 +49,18 @@ def display_error_results(results):
                 f"{color}{matches[0]} ({total_matches - 1} omitted because they're the same error){Colors.NC}"
             )
         else:
-            for line in matches:
-                print(f"{color}{line}{Colors.NC}")
-        
+            # IF matches exceed MAX_TERMINAL_LINES, slice before printing
             if total_matches > MAX_TERMINAL_LINES:
                 print(
-                    f"{color}({total_matches - MAX_TERMINAL_LINES} earlier lines omitted)...{Colors.NC}"
+                    f"{color}({total_matches - MAX_TERMINAL_LINES} earlier lines omitted)..."
                 )
-            matches = matches[-MAX_TERMINAL_LINES:]
-        
-        #for line in matches:
-        #    print(f"{color}{line}{Colors.NC}")
-
+                displayed_matches = matches[-MAX_TERMINAL_LINES:]
+            else:
+                displayed_matches = matches
+            
+            for line in displayed_matches:
+                print(f"{color}{line}{Colors.NC}")
+                
     if not any_matches:
         cprint("No matches found...", Colors.GREEN)
     

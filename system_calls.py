@@ -28,10 +28,7 @@ def retrieve_sled_logs(sledname: str, host_position=None, slots=None):
     """Get dmesg, cri_sel, and per-slot log-util in a single sush2 session."""
     target_slots = slots if slots else ([host_position] if host_position is not None else [])
     
-    if host_position is not None:
-        combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel | grep -i fru:{host_position}"
-    else:
-        combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"
+    combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"
         
     for slot in target_slots:
         combined_cmd += (
@@ -140,6 +137,7 @@ def resolve_target_information(target, args):
                 host_position = int(raw_pos)
             except ValueError:
                 cprint(f"Could not parse host position '{raw_pos}' from {hostname}.", Colors.RED)
+                raise SystemExit(EXIT_SERF_ERROR)
                 
     sled_info = parse_serf_output(run_cmd(["serf", "get", f"asset_tag={sled_asset_tag}", "--fields=name"]))
     
