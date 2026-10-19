@@ -30,7 +30,7 @@ def run_sled_analysis(sledname, args, host_position=None, hostname=None, slots=N
         except Exception as e:
             cprint(f"Hostory failed: {e}", Colors.RED)
             raise SystemExit(EXIT_HOSTORY_FAIL)
-        
+
         if postcode_future:
             try:
                 postcode_output = postcode_future.result() if postcode_future else None
@@ -39,9 +39,9 @@ def run_sled_analysis(sledname, args, host_position=None, hostname=None, slots=N
                 raise SystemExit(EXIT_SLED_LOG_FAIL)
         else:
             postcode_output = None
-            
+
     cprint(f"\n=== Processing logs for {sledname} ===", Colors.CYAN)
-  
+
     if sled_dmesg is None or sled_cri_sel is None:
         cprint("Failed to retrieve sled logs.", Colors.RED)
         raise SystemExit(EXIT_SLED_LOG_FAIL)
