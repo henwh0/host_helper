@@ -8,43 +8,30 @@ from host_helper.config import cri_sel_time_format, cri_sel_time_pattern, ERROR_
 def scan_log_for_errors(log_text, selected_errors = None) -> dict[str, dict]:
     """Scan log_text against ERROR_PATTERN. Returns dict of results."""
     errors_to_search = selected_errors or list(ERROR_PATTERNS)
-    
-    if not log_text:
-        return {
-            key: {"label": ERROR_PATTERNS[key]["label"], "severity": ERROR_PATTERNS[key]["severity"], "matches": []}
-            for key in (selected_errors or list(ERROR_PATTERNS))
-            if key in ERROR_PATTERNS
-        }
+    keys = [key for key in errors_to_search if key in ERROR_PATTERNS]
 
-    results: dict[str, dict] = {}
+    results: dict[str, dict] = {
+        key: {"label": ERROR_PATTERNS[key]["label"], "severity": ERROR_PATTERNS[key]["severity"], "matches": []}
+        for key in keys
+    }
 
-    for key in errors_to_search:
-        if key not in ERROR_PATTERNS:
-            continue
-        pattern_data = ERROR_PATTERNS[key]
-        results[key] = {
-            "label": pattern_data["label"],
-            "severity": pattern_data["severity"],
-            "matches": [],
-        }
+    if not log_text or not keys:
+        return results
 
     combined_regex = re.compile(
         "|".join(
-            f"(?P<{key}>{ERROR_PATTERNS[key]['regex'].pattern})"
-            for key in errors_to_search
-            if key in ERROR_PATTERNS
+            f"(?P<g{i}>{ERROR_PATTERNS[key]['regex'].pattern})"
+            for i, key in enumerate(keys)
         ),
         re.IGNORECASE,
     )
-
     lines = log_text.splitlines() if isinstance(log_text, str) else log_text
 
     for line in lines:
         match = combined_regex.search(line)
         if match:
-            matched_key = match.lastgroup
+            matched_key = keys[int(match.lastgroup[1:])]
             results[matched_key]["matches"].append(line)
-
     return results
 
 
