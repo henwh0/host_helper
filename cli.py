@@ -35,13 +35,13 @@ def display_error_results(results):
     for data in results.values():
         color = SEVERITY_COLORS.get(data["severity"], Colors.NC)
         matches = data["matches"]
-        
+
         if not matches:
             continue
 
         any_matches = True
         total_matches = len(matches)
-        
+
         print(f"\n{color}=== Found {data['label']} ==={Colors.NC}")
 
         if total_matches > 10:
@@ -56,14 +56,15 @@ def display_error_results(results):
                 )
                 displayed_matches = matches[-MAX_TERMINAL_LINES:]
             else:
+
                 displayed_matches = matches
-            
+
             for line in displayed_matches:
                 print(f"{color}{line}{Colors.NC}")
-                
+
     if not any_matches:
         cprint("No matches found...", Colors.GREEN)
-    
+
 
 #############################
 ######### MAIN ##############
@@ -92,7 +93,7 @@ def main() -> None:
     model_name = validate_asset_model(sled_model_name)
     cprint(f"Detected model : {model_name}", Colors.GREEN)
     cprint(f"Asset ID       : {asset_id}\n", Colors.GREEN)
-    
+
     # Gathering sled data
     sled_analysis_start = perf_counter()
     dmesg_results, cri_sel_results, log_util_results, postcode_output = run_sled_analysis(sledname, args, host_position, hostname, slots)
@@ -107,4 +108,3 @@ def main() -> None:
     cprint("\nRun complete!", Colors.GREEN)
     print("Performance stats:")
     print(f"Time to analyze logs & retrieve postcodes: {sled_analysis_end - sled_analysis_start:.2f} seconds")
-    
