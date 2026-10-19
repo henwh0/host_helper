@@ -27,9 +27,9 @@ LOG_UTIL_DELIMITER: str = "=== LOG_UTIL_START ==="
 def retrieve_sled_logs(sledname: str, host_position=None, slots=None):
     """Get dmesg, cri_sel, and per-slot log-util in a single sush2 session."""
     target_slots = slots if slots else ([host_position] if host_position is not None else [])
-    
+
     combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"
-        
+
     for slot in target_slots:
         combined_cmd += (
             f"; echo '{LOG_UTIL_DELIMITER}:{slot}'; "
@@ -44,7 +44,7 @@ def retrieve_sled_logs(sledname: str, host_position=None, slots=None):
             Colors.RED,
         )
         raise SystemExit(EXIT_SLED_LOG_FAIL)
-    
+
     if not result.stdout.strip():
         cprint(f"No output from {sledname}: {result.stderr}", Colors.RED)
         raise SystemExit(EXIT_SLED_LOG_FAIL)
@@ -66,7 +66,7 @@ def retrieve_sled_logs(sledname: str, host_position=None, slots=None):
                 pass
     else:
         cri_sel = remainder.strip()
-        
+
     return dmesg, cri_sel, log_util_by_slot
 
 #########
@@ -115,10 +115,10 @@ def resolve_target_information(target, args):
         raise SystemExit(EXIT_SERF_ERROR)
     sled_model_name = host_info.get("model")
     asset_id = host_info.get("asset_id")
-    
+
     host_position = None
     slots: list[int] = []
-    
+
     if args.all_hosts:
         # Retrieve slot numbers for all hosts in sled
         slot_numbers = parse_serf_output(run_cmd(["serf", "get", f"parent_asset_tag={sled_asset_tag}", "--fields=name,rack_sub_position_slot"]))
@@ -138,8 +138,8 @@ def resolve_target_information(target, args):
             except ValueError:
                 cprint(f"Could not parse host position '{raw_pos}' from {hostname}.", Colors.RED)
                 raise SystemExit(EXIT_SERF_ERROR)
-                
+
     sled_info = parse_serf_output(run_cmd(["serf", "get", f"asset_tag={sled_asset_tag}", "--fields=name"]))
-    
+
     sledname = sled_info[0].get("name", sled_asset_tag) if sled_info else sled_asset_tag
     return sledname, sled_model_name, hostname, host_position, slots, asset_id
