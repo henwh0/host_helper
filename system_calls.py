@@ -18,7 +18,7 @@ def run_cmd(cmd: list[str]) -> str:
     return result.stdout.strip()
 
 
-#########n
+#########
 
 CRI_SEL_DELIMITER: str = "=== CRI_SEL_START ==="
 LOG_UTIL_DELIMITER: str = "=== LOG_UTIL_START ==="
@@ -28,8 +28,17 @@ def retrieve_sled_logs(sledname: str, host_position=None, slots=None):
     """Get dmesg, cri_sel, and per-slot log-util in a single sush2 session."""
     target_slots = slots if slots else ([host_position] if host_position is not None else [])
 
-    combined_cmd = f"dmesg; echo '{CRI_SEL_DELIMITER}'; cat /mnt/data/cri_sel"
-
+    # Filter dmesg to target host's position when a position is specified
+    dmesg_cmd = "dmesg"
+    if host_position is not None:
+        dmesg_cmd += f" | grep -i 'fru:{host_position}"
+    
+    combined_cmd = (
+        f"{dmesg_cmd}; "
+        f"echo '{CRI_SEL_DELIMITER}'; "
+        "cat /mnt/data/cri_sel"
+    )
+    
     for slot in target_slots:
         combined_cmd += (
             f"; echo '{LOG_UTIL_DELIMITER}:{slot}'; "
