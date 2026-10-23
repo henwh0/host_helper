@@ -31,7 +31,7 @@ def retrieve_sled_logs(sledname: str, host_position=None, slots=None):
     # Filter dmesg to target host's position when a position is specified
     dmesg_cmd = "dmesg"
     if host_position is not None:
-        dmesg_cmd += f" | grep -i 'fru:{host_position}"
+        dmesg_cmd += f" | grep -iE 'fru:{host_position}|slot {host_position}'"
     
     combined_cmd = (
         f"{dmesg_cmd}; "
